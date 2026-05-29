@@ -1,0 +1,4 @@
+
+open *.nuon
+  |
+    wrap tasks
