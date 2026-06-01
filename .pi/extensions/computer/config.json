@@ -1,0 +1,21 @@
+{
+  "profile": "brian",
+  "whisperBin": "/home/linuxbrew/.linuxbrew/bin/whisper-cli",
+  "whisperModelStt": "/home/musclegear555/.share/whisper/ggml-small.bin",
+  "whisperModelWake": "",
+  "vadAggressiveness": 2,
+  "volumes": {
+    "ready": 0.5,
+    "done": 0.45,
+    "thinking": 0.35,
+    "listen": 0.5,
+    "success": 0.4,
+    "error": 0.4
+  },
+  "ttsVolume": 1,
+  "masterVolume": 1.5,
+  "maxRecordSec": 300,
+  "silenceFrames": 150,
+  "wakeWord": "computer",
+  "wakeEnabled": false
+}
