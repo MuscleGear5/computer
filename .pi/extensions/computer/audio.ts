@@ -5,7 +5,7 @@
  * Handles Termux vs Linux differences transparently.
  */
 
-import { execFile, exec } from "node:child_process";
+import { execFile, exec, spawn } from "node:child_process";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { unlink, writeFile } from "node:fs/promises";
@@ -126,22 +126,68 @@ export async function listenVad(
   whisperModel: string,
   maxRecordSec: number,
   silenceFrames: number,
+  signal?: AbortSignal,
 ): Promise<{ wavFile: string; transcription: string }> {
   const id = randomUUID().slice(0, 8);
   const wavFile = join(TMP_BASE, `voice_${id}.wav`);
   const vadScript = join(getExtensionDir(), "vad_record.py");
+  const stopFile = join(TMP_BASE, `vad_stop_${id}`);
 
-  try {
-    const recArgs = getRecArgs(16000, 1);
-    await shell(
-      `rec ${recArgs.join(" ")} 2>/dev/null | python3 "${vadScript}" "${wavFile}" ${vadAggressiveness} ${maxRecordSec} ${silenceFrames} 2>/dev/null`,
-      (maxRecordSec + 5) * 1000
-    );
-  } catch {
-    // Recording ended (timeout or VAD silence)
-  }
+  // Clean up stop file if it exists from a previous run
+  try { await unlink(stopFile); } catch {}
 
-  return { wavFile, transcription: "" };
+  const recArgs = getRecArgs(16000, 1);
+  const recCmd = `rec ${recArgs.join(" ")} 2>/dev/null`;
+  const vadArgs = [vadScript, wavFile, String(vadAggressiveness), String(maxRecordSec), String(silenceFrames), stopFile];
+
+  // Use bash to pipe rec into python3, with process group for clean kill
+  const child = spawn("bash", [
+    "-c",
+    `${recCmd} | python3 "${vadScript}" ${vadArgs.map(a => `"${a}"`).join(" ")} 2>/dev/null`
+  ], {
+    detached: true,  // create new process group
+    stdio: ["pipe", "pipe", "pipe"],
+  });
+
+  let killed = false;
+  const killProc = () => {
+    if (killed) return;
+    killed = true;
+    try {
+      // Write stop file so vad_record.py exits cleanly
+      const { writeFileSync } = require("node:fs");
+      writeFileSync(stopFile, "stop");
+    } catch {}
+    try { process.kill(-child.pid!, "SIGTERM"); } catch {}
+    // Force kill after 2s if still alive
+    setTimeout(() => { try { process.kill(-child.pid!, "SIGKILL"); } catch {} }, 2000);
+  };
+
+  // Wire up abort signal (Escape key) to kill the recording
+  const onAbort = () => killProc();
+  signal?.addEventListener("abort", onAbort, { once: true });
+
+  // Hard timeout as safety net
+  const timeout = setTimeout(killProc, (maxRecordSec + 5) * 1000);
+
+  return new Promise<{ wavFile: string; transcription: string }>((resolve) => {
+    child.on("exit", () => {
+      clearTimeout(timeout);
+      signal?.removeEventListener("abort", onAbort);
+      // Clean up stop file
+      try { unlink(stopFile); } catch {}
+      resolve({ wavFile, transcription: "" });
+    });
+    child.on("error", () => {
+      clearTimeout(timeout);
+      signal?.removeEventListener("abort", onAbort);
+      try { unlink(stopFile); } catch {}
+      resolve({ wavFile, transcription: "" });
+    });
+    // Drain stdout/stderr to prevent buffer filling up
+    child.stdout?.on("data", () => {});
+    child.stderr?.on("data", () => {});
+  });
 }
 
 export async function transcribeWav(

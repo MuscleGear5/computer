@@ -180,6 +180,7 @@ export default function (pi: ExtensionAPI) {
         resolved.whisperModelStt,
         cfg.maxRecordSec,
         cfg.silenceFrames,
+        signal,
       );
 
       // Done tone - immediately after recording stops, before transcription
@@ -205,6 +206,7 @@ export default function (pi: ExtensionAPI) {
           resolved.whisperModelStt,
           cfg.maxRecordSec,
           cfg.silenceFrames,
+          signal,
         );
         await playSound("done", cfg.volumes.done, cfg.masterVolume);
         const retry = await transcribeWav(retryWav, resolved.whisperBin, resolved.whisperModelStt);
@@ -288,6 +290,7 @@ export default function (pi: ExtensionAPI) {
         resolved.whisperModelStt,
         cfg.maxRecordSec,
         cfg.silenceFrames,
+        signal,
       );
 
       // Done tone - immediately after recording stops, before transcription
@@ -313,6 +316,7 @@ export default function (pi: ExtensionAPI) {
           resolved.whisperModelStt,
           cfg.maxRecordSec,
           cfg.silenceFrames,
+          signal,
         );
         await playSound("done", cfg.volumes.done, cfg.masterVolume);
         const retry = await transcribeWav(retryWav, resolved.whisperBin, resolved.whisperModelStt);
