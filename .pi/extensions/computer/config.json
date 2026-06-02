@@ -3,7 +3,7 @@
   "whisperBin": "/home/linuxbrew/.linuxbrew/bin/whisper-cli",
   "whisperModelStt": "/home/musclegear555/.share/whisper/ggml-small.bin",
   "whisperModelWake": "",
-  "vadAggressiveness": 2,
+  "vadAggressiveness": 3,
   "volumes": {
     "ready": 0.5,
     "done": 0.45,
