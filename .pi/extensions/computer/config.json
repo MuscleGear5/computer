@@ -13,9 +13,9 @@
     "error": 0.4
   },
   "ttsVolume": 1,
-  "masterVolume": 1.5,
+  "masterVolume": 1.0,
   "maxRecordSec": 300,
-  "silenceFrames": 150,
+  "silenceFrames": 25,
   "wakeWord": "computer",
   "wakeEnabled": false
 }
