@@ -87,7 +87,12 @@ log_ok "Termux packages ready"
 # --- Install edge-tts ---
 log_info "Installing edge-tts..."
 if ! command -v edge-tts &>/dev/null; then
-    pip install edge-tts >/dev/null 2>&1 && log_ok "edge-tts installed" || log_warn "edge-tts install failed (non-critical)"
+    if pip install edge-tts 2>&1; then
+        log_ok "edge-tts installed"
+    else
+        log_error "edge-tts install FAILED -- TTS will not work"
+        log_error "Try manually: pip install edge-tts"
+    fi
 else
     log_ok "edge-tts already present"
 fi

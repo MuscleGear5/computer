@@ -100,6 +100,12 @@ fi
 
 mkdir -p "$(dirname "$OUT_PATH")"
 
+# --- Auto-install edge-tts if missing ---
+if ! command -v edge-tts &>/dev/null; then
+    echo "speak: edge-tts not found, installing..." >&2
+    pip install edge-tts 2>&1 || { echo "speak: failed to install edge-tts" >&2; exit 1; }
+fi
+
 edge-tts \
   --voice "$VOICE" \
   --rate "$RATE" \
