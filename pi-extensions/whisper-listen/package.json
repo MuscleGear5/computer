@@ -1,7 +1,0 @@
-{
-  "name": "whisper-listen",
-  "version": "1.0.0",
-  "description": "Whisper-based listen tool with notification beeps",
-  "type": "module",
-  "main": "index.ts"
-}

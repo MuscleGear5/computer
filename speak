@@ -1,0 +1,120 @@
+#!/usr/bin/env bash
+# speak — speak text aloud via Edge TTS.
+# Hardcoded: Guy (en-US) by default, Antoine (fr-CA) for French, both at 1.25x.
+#
+# Usage:
+#   speak "Hello world"
+#   speak --french "Bonjour le monde"
+#   speak -fr "Salut"
+#   speak --female "Hi there"
+#   speak -fem "Hi there"                           # English female (Jenny)
+#   speak --female --french "Salut Sylvie"          # French female (Sylvie)
+#   speak --rate +50% "Slower please"
+#   speak --voice en-US-AriaNeural "Different voice"
+#   echo "From stdin" | speak
+#
+# Flags:
+#   --french, -fr          use fr-CA-AntoineNeural (or Sylvie if --female)
+#   --female, -fem         use female voice (Jenny en-US, Sylvie fr-CA)
+#   --voice NAME, -v NAME  override voice entirely (skips language + gender default)
+#   --rate RATE, -r RATE   override rate (default: +25%)
+#   --output PATH, -o PATH write to a specific file (default: tmp + play)
+#   --no-play              don't auto-play, just write
+#   --help, -h             show this help
+set -euo pipefail
+
+GENDER="male"   # male | female
+LANG="en"       # en | fr
+VOICE=""        # resolved below
+RATE="+25%"
+OUT_PATH=""
+PLAY=1
+TEXT=""
+
+usage() {
+  sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
+  exit 0
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --french|-fr)         LANG="fr"; shift ;;
+    --female|-fem)        GENDER="female"; shift ;;
+    --voice|-v)           VOICE="$2"; shift 2 ;;
+    --rate|-r)            RATE="$2"; shift 2 ;;
+    --output|-o)          OUT_PATH="$2"; shift 2 ;;
+    --no-play)            PLAY=0; shift ;;
+    --help|-h)            usage ;;
+    --)                   shift; break ;;
+    -*)                   echo "speak: unknown flag $1" >&2; exit 2 ;;
+    *)
+      if [ -z "$TEXT" ]; then
+        TEXT="$1"
+      else
+        TEXT="$TEXT $1"
+      fi
+      shift
+      ;;
+  esac
+done
+
+# If no text was given as args, read from stdin.
+if [ -z "$TEXT" ]; then
+  if [ -t 0 ]; then
+    echo "speak: no text provided (and stdin is a tty)" >&2
+    exit 2
+  fi
+  TEXT="$(cat)"
+fi
+
+if [ -z "$TEXT" ]; then
+  echo "speak: empty text" >&2
+  exit 2
+fi
+
+# Resolve voice: explicit --voice wins; else pick from gender + language.
+if [ -z "$VOICE" ]; then
+  case "${LANG}" in
+    fr)
+      if [ "$GENDER" = "female" ]; then
+        VOICE="fr-CA-SylvieNeural"
+      else
+        VOICE="fr-CA-AntoineNeural"
+      fi
+      ;;
+    *)
+      if [ "$GENDER" = "female" ]; then
+        VOICE="en-US-JennyNeural"
+      else
+        VOICE="en-US-GuyNeural"
+      fi
+      ;;
+  esac
+fi
+
+# Pick output path
+if [ -z "$OUT_PATH" ]; then
+  # Use $HOME not /tmp — /tmp is permission-denied on this Termux.
+  OUT_PATH="$HOME/speak_$$.mp3"
+fi
+
+mkdir -p "$(dirname "$OUT_PATH")"
+
+edge-tts \
+  --voice "$VOICE" \
+  --rate "$RATE" \
+  --text "$TEXT" \
+  --write-media "$OUT_PATH"
+
+if [ "$PLAY" -eq 1 ]; then
+  play "$OUT_PATH" 2>/dev/null
+  # Don't leave temp files lying around
+  if [ "$OUT_PATH" = "$HOME/speak_$$.mp3" ]; then
+    rm -f "$OUT_PATH"
+  fi
+fi
+
+# On non-default output path, just print where we wrote it
+if [ -n "${OUT_PATH:-}" ] && [ "$OUT_PATH" != "$HOME/speak_$$.mp3" ]; then
+  echo "$OUT_PATH"
+fi

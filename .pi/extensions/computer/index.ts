@@ -32,7 +32,7 @@ import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { Type } from "typebox";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs/promises";
+import { existsSync, readFileSync, mkdirSync } from "node:fs";
 import { exec } from "node:child_process";
 import { randomUUID } from "node:crypto";
 

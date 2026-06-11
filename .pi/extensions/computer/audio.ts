@@ -28,7 +28,7 @@ function run(cmd: string, args: string[], timeoutMs: number): Promise<string> {
 
 function shell(cmd: string, timeoutMs: number): Promise<void> {
   return new Promise((resolve, reject) => {
-    exec(cmd, { timeout: timeoutMs }, (err) => {
+    exec(cmd, { timeout: timeoutMs, maxBuffer: 1024 * 1024 }, (err) => {
       if (err) return reject(err);
       resolve();
     });
