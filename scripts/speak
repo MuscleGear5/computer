@@ -103,7 +103,22 @@ mkdir -p "$(dirname "$OUT_PATH")"
 # --- Auto-install edge-tts if missing ---
 if ! command -v edge-tts &>/dev/null; then
     echo "speak: edge-tts not found, installing..." >&2
-    pip install edge-tts 2>&1 || { echo "speak: failed to install edge-tts" >&2; exit 1; }
+    # Try pip, pip3, then python -m pip
+    if command -v pip &>/dev/null; then
+        pip install edge-tts 2>&1
+    elif command -v pip3 &>/dev/null; then
+        pip3 install edge-tts 2>&1
+    elif command -v python &>/dev/null; then
+        python -m pip install edge-tts 2>&1
+    else
+        echo "speak: no pip/python found -- cannot install edge-tts" >&2
+        exit 1
+    fi
+    # Verify it actually installed
+    if ! command -v edge-tts &>/dev/null; then
+        echo "speak: edge-tts install failed" >&2
+        exit 1
+    fi
 fi
 
 edge-tts \
