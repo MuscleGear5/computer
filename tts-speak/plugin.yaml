@@ -1,0 +1,12 @@
+name: tts-speak
+version: 1.4.0
+description: "Speak every assistant response aloud using edge-tts (Guy voice), and play chimes at every lifecycle event (session start/end, user message, tool start/done, response). All chime scripts are editable live under scripts/ — no restart required."
+author: "user"
+hooks:
+  - on_session_start
+  - on_session_end
+  - pre_llm_call
+  - pre_tool_call
+  - post_tool_call
+  - post_llm_call
+  - post_api_request

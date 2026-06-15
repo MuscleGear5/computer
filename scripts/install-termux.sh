@@ -279,6 +279,52 @@ copy_config_templates() {
     fi
 }
 
+# --- Wire tts-speak plugin ---
+wire_tts_plugin() {
+    log_info "Wiring tts-speak plugin..."
+    local repo_tts="$HERMES_REPO_DIR/tts-speak"
+    local plugin_dir="$HERMES_HOME/plugins/tts-speak"
+
+    if [ ! -d "$repo_tts/__init__.py" ] || [ ! -f "$repo_tts/__init__.py" ]; then
+        log_warn "tts-speak plugin not found in repo, skipping"
+        return
+    fi
+
+    # Remove old loose files (non-symlink)
+    if [ -d "$plugin_dir" ]; then
+        # Remove old real files, keep symlinks intact
+        find "$plugin_dir" -maxdepth 2 ! -type l -delete 2>/dev/null || true
+        # Remove empty dirs
+        rmdir "$plugin_dir/scripts" 2>/dev/null || true
+    else
+        mkdir -p "$plugin_dir"
+    fi
+
+    # Create symlinks: __init__.py, plugin.yaml, scripts/
+    ln -sfn "$repo_tts/__init__.py" "$plugin_dir/__init__.py"
+    ln -sfn "$repo_tts/plugin.yaml" "$plugin_dir/plugin.yaml"
+    ln -sfn "$repo_tts/scripts" "$plugin_dir/scripts"
+
+    # Install edge-tts for TTS
+    if ! command -v edge-tts &>/dev/null; then
+        log_info "Installing edge-tts..."
+        pip install edge-tts 2>&1 | tail -1 || log_warn "edge-tts install failed"
+    fi
+
+    # Install MiniMax TTS CLI (speak) to ~/.local/bin
+    local speak_repo="$repo_tts/../scripts/speak"
+    if [ -f "$speak_repo" ]; then
+        mkdir -p "$HOME/.local/bin"
+        ln -sfn "$speak_repo" "$HOME/.local/bin/speak"
+        chmod +x "$speak_repo"
+        log_ok "MiniMax speak CLI linked to ~/.local/bin/speak"
+    fi
+
+    # Generate chimes directory
+    mkdir -p "$HOME/chimes"
+    log_ok "tts-speak plugin wired (symlinked from repo)"
+}
+
 # --- Print success ---
 print_success() {
     echo
@@ -309,6 +355,7 @@ main() {
     install_deps
     setup_path
     copy_config_templates
+    wire_tts_plugin
     print_success
 }
 
