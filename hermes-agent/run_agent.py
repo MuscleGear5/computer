@@ -2333,9 +2333,13 @@ class AIAgent:
                 except Exception:
                     pass
         # Propagate interrupt to any running child agents (subagent delegation)
+        # Skip children that are delegate_task subagents -- they should finish
+        # regardless of out-of-band user messages.
         with self._active_children_lock:
             children_copy = list(self._active_children)
         for child in children_copy:
+            if getattr(child, "_delegate_immune", False):
+                continue
             try:
                 child.interrupt(message)
             except Exception as e:

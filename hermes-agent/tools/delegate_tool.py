@@ -1175,6 +1175,7 @@ def _build_child_agent(
     # Stash the post-degrade role for introspection (leaf if the
     # kill switch or depth bounded the caller's requested role).
     child._delegate_role = effective_role
+    child._delegate_immune = True  # immune to out-of-band user message interrupts
     # Stash subagent identity for nested-delegation event propagation and
     # for _run_single_child / interrupt_subagent to look up by id.
     child._subagent_id = subagent_id
@@ -2176,8 +2177,15 @@ def delegate_task(
             while pending:
                 if getattr(parent_agent, "_interrupt_requested", False) is True:
                     # Parent interrupted — collect whatever finished and
-                    # abandon the rest.  Children already received the
-                    # interrupt signal; we just can't wait forever.
+                    # abandon the rest.  Skip children marked immune
+                    # (delegate_task subagents that should finish regardless).
+                    immune_pending = set()
+                    for f in pending:
+                        idx = futures[f]
+                        child = _child_by_index.get(idx)
+                        if getattr(child, "_delegate_immune", False):
+                            immune_pending.add(f)
+                            continue
                     for f in pending:
                         idx = futures[f]
                         if f.done():
@@ -2209,6 +2217,10 @@ def delegate_task(
                             }
                         results.append(entry)
                         completed_count += 1
+                    # If there are immune children still pending, keep waiting
+                    if immune_pending:
+                        pending = immune_pending
+                        continue
                     break
 
                 from concurrent.futures import wait as _cf_wait, FIRST_COMPLETED
