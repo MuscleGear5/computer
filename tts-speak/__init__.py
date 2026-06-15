@@ -134,17 +134,27 @@ def _install_custom_banner() -> None:
 _install_custom_banner()
 
 
-def _run_script(script: Path, *args: str) -> None:
-    """Run a shell script non-blocking, fire-and-forget."""
+_ASK_FLAG = Path(os.environ.get("TMPDIR", "/tmp")) / ".ask_recording"
+_TTS_DONE = Path(os.environ.get("TMPDIR", "/tmp")) / ".tts_done"
+
+
+def _run_script(script: Path, *args: str, blocking: bool = False) -> None:
+    """Run a shell script.
+    If blocking=True, waits for the process to finish before returning.
+    Suppresses all output when ask.sh is recording (flag file exists)."""
+    if _ASK_FLAG.exists():
+        return
     cmd = [str(script)] + list(args)
     try:
-        subprocess.Popen(
+        proc = subprocess.Popen(
             cmd,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             stdin=subprocess.DEVNULL,
             start_new_session=True,
         )
+        if blocking:
+            proc.wait(timeout=60)
     except Exception as exc:
         _debug(f"SCRIPT ERROR ({script.name}): {exc}")
 
